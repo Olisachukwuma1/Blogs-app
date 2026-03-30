@@ -5,7 +5,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const prodSlice = createSlice({
 name: "prod",
 initialState: {
-    link: "http://localhost:5000",
+    link: import.meta.env.VITE_BACKEND_URL,
 },
 
 
