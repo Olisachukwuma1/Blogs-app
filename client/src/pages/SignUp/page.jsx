@@ -1,12 +1,14 @@
 import React, { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { toast } from "react-toastify"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch  } from "react-redux"
+import { authActions } from "../../store/authReducer"
 import axios from "axios"
 
 const SignUp = () => {
   const history = useNavigate()
   const backendLink = useSelector((state) => state.prod.link)
+    const dispatch = useDispatch()
   const [step, setStep] = useState(1) // step 1 = signup, step 2 = otp
   const [email, setEmail] = useState("") // store email for otp step
   const [otp, setOtp] = useState("")
@@ -35,31 +37,46 @@ const SignUp = () => {
       setStep(2) // move to OTP step
     } catch (error) {
       toast.error(error.response.data.error)
-    } finally {
-      setInputs({
-        username: "",
-        email: "",
-        password: ""
-      })
     }
+     finally {
+  setInputs({
+    username: "",
+    email: Inputs.email,
+    password: Inputs.password
+  })
+}
   }
 
-  // Step 2 - Verify OTP
-  const verifyOtp = async (e) => {
-    e.preventDefault()
-    try {
-      await axios.post(
-        `${backendLink}/api/v1/verify-email`,
-        { email, otp },
-        { withCredentials: true }
-      )
-      toast.success("Email verified! You can now login.")
-      history("/login")
-    } catch (error) {
-      toast.error(error.response.data.error)
-    }
-  }
+  // Verify OTP
+const verifyOtp = async (e) => {
+  e.preventDefault()
+  try {
+    // Step 1 - Verify OTP
+    await axios.post(
+      `${backendLink}/api/v1/verify-email`,
+      { email, otp },
+      { withCredentials: true }
+    )
 
+    // Step 2 - Auto login
+    const loginRes = await axios.post(
+      `${backendLink}/api/v1/log-in`,
+      { email, password: Inputs.password },
+      { withCredentials: true }
+    )
+
+    // Step 3 - Dispatch to Redux
+    dispatch(authActions.login(loginRes.data.user))
+
+    toast.success("Email verified! Welcome 🎉")
+
+    // Step 4 - Redirect to profile
+    history("/profile")
+
+  } catch (error) {
+    toast.error(error.response?.data?.error || "Something went wrong")
+  }
+}
   // Resend OTP
   const resendOtp = async () => {
     try {
