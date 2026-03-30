@@ -1,39 +1,141 @@
 const User  = require("../models/user")
+const Otp = require("../models/otp")     
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs")
+const crypto = require("crypto")         
+const nodemailer = require("nodemailer")  
+
+
+
+// add this transporter
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+})
+
+
 //signup-controller
 
 
-exports.signupUser = async (req,res) => {
-    try{
-    const {username,email, password } = req.body
-  
-   
-    if  ( !username || !email || !password) {
-        return res 
-        .status(400)
-        .json ({success:false,error:"All fields are required"})      
-}
+exports.signupUser = async (req, res) => {
+      console.log("Otp model:", Otp)
+  try {
+    const { username, email, password } = req.body
 
-const existingUser = await User.findOne ({ $or:  [{ username },  { email }]  })
-if(existingUser) {
-    return res
-    .status(400)
-    .json({success : false, error: "user or email already existed"})
-}
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, error: "All fields are required" })
+    }
 
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] })
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: "User or email already exists" })
+    }
 
-const hashedPass = await bcrypt.hash(password, 10)
-const newUser = new User({ username, email, password : hashedPass })
-await newUser.save();
-return res.status(200).json({success:true, message:"Account created"})
-} catch (error){
+    const hashedPass = await bcrypt.hash(password, 10)
+
+    // Save user as unverified
+    const newUser = new User({ username, email, password: hashedPass, isVerified: false })
+    await newUser.save()
+
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString()
+
+    // Delete any old OTPs for this email
+    await Otp.deleteMany({ email })
+
+    // Save new OTP
+    await Otp.create({ email, otp })
+
+    // Send OTP email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Verify Your Account - AugieTech",
+      text: `Welcome to AugieTech! Your verification OTP is ${otp}. It expires in 5 minutes.`
+    })
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Account created. Please check your email for the OTP." 
+    })
+
+  } catch (error) {
     console.log(error)
-    return res
-    .status(400)
-    .json({success : false, error: "Internal server error"})
+    return res.status(500).json({ success: false, error: "Internal server error" })
+  }
 }
 
+
+
+//verify email controller
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { email, otp } = req.body
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: "Email and OTP are required" })
+    }
+
+    const record = await Otp.findOne({ email })
+
+    if (!record) {
+      return res.status(400).json({ success: false, error: "OTP expired or not found" })
+    }
+
+    if (record.otp !== otp) {
+      return res.status(400).json({ success: false, error: "Invalid OTP" })
+    }
+
+    // Mark user as verified
+    await User.updateOne({ email }, { isVerified: true })
+
+    // Delete OTP
+    await Otp.deleteMany({ email })
+
+    return res.status(200).json({ success: true, message: "Email verified successfully. You can now login." })
+
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({ success: false, error: "Internal server error" })
+  }
+}
+
+//resend OTP controller
+exports.resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body
+
+    const user = await User.findOne({ email })
+
+    if (!user) {
+      return res.status(400).json({ success: false, error: "Email not found" })
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, error: "Email already verified" })
+    }
+
+    // Generate new OTP
+    const otp = crypto.randomInt(100000, 999999).toString()
+    await Otp.deleteMany({ email })
+    await Otp.create({ email, otp })
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Resend OTP - AugieTech",
+      text: `Your new OTP is ${otp}. It expires in 5 minutes.`
+    })
+
+    return res.status(200).json({ success: true, message: "New OTP sent to your email" })
+
+  } catch (error) {
+    console.log(error)
+    return res.status(500).json({ success: false, error: "Internal server error" })
+  }
 }
 
 //login controller
@@ -57,6 +159,10 @@ if(!existingUser) {
     .json({
         success : false, 
         error: "invalid credentials"})
+}
+// add this block
+if (!existingUser.isVerified) {
+  return res.status(400).json({ success: false, error: "Please verify your email first" })
 }
 
 const checkPass = await bcrypt.compare(password, existingUser.password)

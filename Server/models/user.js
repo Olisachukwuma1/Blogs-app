@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
         type: String,   
         required: true,
         unique: true,
+       
     },
        email: {
         type: String,   
@@ -28,6 +29,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "https://res.cloudinary.com/dzcmadjlq/image/upload/v1700864415/default-avatar_ajl7nq.png",
     },
+
+    isVerified: { 
+        type: Boolean, 
+        default: false }
 
 },
 

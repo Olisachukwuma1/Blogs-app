@@ -6,6 +6,12 @@ const upload = require("../middleware/ImageUpload")
 //signup route
 router.post("/signup", userController.signupUser)
 
+// verify email OTP  ← add this
+router.post("/verify-email", userController.verifyEmail)
+
+// resend OTP ← add this
+router.post("/resend-otp", userController.resendOtp)
+
 //log-in route
 router.post("/log-in", userController.loginUser)
 
@@ -35,6 +41,7 @@ router.get("/getProfileData",
      authMiddleware.authorizeRole("user"),
      upload.single("image"),
     userController.changeAvatar)
+
 
 
 module.exports = router
