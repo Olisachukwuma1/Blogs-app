@@ -11,6 +11,7 @@ const SignUp = () => {
     const dispatch = useDispatch()
   const [step, setStep] = useState(1) // step 1 = signup, step 2 = otp
   const [email, setEmail] = useState("") // store email for otp step
+  const [password, setPassword] = useState("")
   const [otp, setOtp] = useState("")
   const [Inputs, setInputs] = useState({
     username: "",
@@ -24,28 +25,28 @@ const SignUp = () => {
   }
 
   // Step 1 - Signup
-  const SubmitHandler = async (e) => {
-    e.preventDefault()
-    try {
+ const SubmitHandler = async (e) => {
+  e.preventDefault()
+  try {
     await axios.post(
-        `${backendLink}/api/v1/signup`,
-        Inputs,
-        { withCredentials: true }
-      )
-      toast.success("Account created! Please check your email for OTP.")
-      setEmail(Inputs.email) // save email for otp step
-      setStep(2) // move to OTP step
-    } catch (error) {
-      toast.error(error.response.data.error)
-    }
-     finally {
-  setInputs({
-    username: "",
-    email: Inputs.email,
-    password: Inputs.password
-  })
-}
+      `${backendLink}/api/v1/signup`,
+      Inputs,
+      { withCredentials: true }
+    )
+    toast.success("Account created! Please check your email for OTP.")
+    setEmail(Inputs.email)       // ← save email
+    setPassword(Inputs.password) // ← save password
+    setStep(2)
+  } catch (error) {
+    toast.error(error.response.data.error)
+  } finally {
+    setInputs({
+      username: "",
+      email: "",
+      password: ""
+    })
   }
+}
 
   // Verify OTP
 const verifyOtp = async (e) => {
@@ -58,10 +59,10 @@ const verifyOtp = async (e) => {
       { withCredentials: true }
     )
 
-    // Step 2 - Auto login
+    // Step 2 - Auto login using saved password
     const loginRes = await axios.post(
       `${backendLink}/api/v1/log-in`,
-      { email, password: Inputs.password },
+      { email, password }, // ← use saved password state
       { withCredentials: true }
     )
 
