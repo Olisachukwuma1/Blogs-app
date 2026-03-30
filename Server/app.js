@@ -7,7 +7,7 @@ require("./conn/conn")
 const userApi = require("./routes/user")
 const adminApi = require("./routes/admin")
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin:  process.env.FRONTEND_URL,
     credentials: true,  
 
 }))
