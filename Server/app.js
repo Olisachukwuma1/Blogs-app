@@ -8,6 +8,7 @@ const userApi = require("./routes/user")
 const adminApi = require("./routes/admin")
 app.use(cors({
     origin:   [
+         process.env.FRONTEND_URL,
     "https://blogs-app-mu.vercel.app",
     "https://blogs-gjvk2tpd5-olisachukwuma1s-projects.vercel.app",
     "https://blogs-pihggub2t-olisachukwuma1s-projects.vercel.app",
