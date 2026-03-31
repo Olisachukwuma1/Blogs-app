@@ -3,19 +3,8 @@ const Otp = require("../models/otp")
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs")
 const crypto = require("crypto")         
-const nodemailer = require("nodemailer")  
-
-
-
-// add this transporter
-const transporter = nodemailer.createTransport({
-  service: "Gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-})
-
+const { Resend } = require("resend")
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 //signup-controller
 
@@ -50,13 +39,12 @@ exports.signupUser = async (req, res) => {
     await Otp.create({ email, otp })
 
     // Send OTP email
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Verify Your Account - AugieTech",
-      text: `Welcome to AugieTech! Your verification OTP is ${otp}. It expires in 5 minutes.`
-    })
-
+   await resend.emails.send({
+  from: "onboarding@resend.dev", // use this for testing
+  to: email,
+  subject: "Verify Your Account - AugieTech",
+  text: `Welcome to AugieTech! Your verification OTP is ${otp}. It expires in 5 minutes.`
+})
     return res.status(200).json({ 
       success: true, 
       message: "Account created. Please check your email for the OTP." 
@@ -123,12 +111,12 @@ exports.resendOtp = async (req, res) => {
     await Otp.deleteMany({ email })
     await Otp.create({ email, otp })
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Resend OTP - AugieTech",
-      text: `Your new OTP is ${otp}. It expires in 5 minutes.`
-    })
+await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: email,
+  subject: "Resend OTP - AugieTech",
+  text: `Your new OTP is ${otp}. It expires in 5 minutes.`
+})
 
     return res.status(200).json({ success: true, message: "New OTP sent to your email" })
 
