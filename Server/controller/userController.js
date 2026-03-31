@@ -4,6 +4,9 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs")
 const crypto = require("crypto")         
 const { Resend } = require("resend")
+
+
+
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 //signup-controller
@@ -39,12 +42,13 @@ exports.signupUser = async (req, res) => {
     await Otp.create({ email, otp })
 
     // Send OTP email
-   await resend.emails.send({
+   const result = await resend.emails.send({
   from: "onboarding@resend.dev", // use this for testing
   to: email,
   subject: "Verify Your Account - AugieTech",
   text: `Welcome to AugieTech! Your verification OTP is ${otp}. It expires in 5 minutes.`
 })
+console.log( result)
     return res.status(200).json({ 
       success: true, 
       message: "Account created. Please check your email for the OTP." 
